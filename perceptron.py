@@ -31,7 +31,6 @@ def plot_decision_regions(X, y, classifier, resolution=0.02):
                     c=colors[idx],
                     marker=markers[idx],
                     label=cl,
-                    edgecolor='black'
                     )
 
 
