@@ -38,7 +38,6 @@ model.summary()
 损失函数 - 测量模型在训练期间的准确程度。你希望最小化此函数，以便将模型“引导”到正确的方向上。
 指标 - 用于监控训练和测试步骤。以下示例使用了准确率，即被正确分类的图像的比率。
 '''
-
 model.compile(optimizer='adam', loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
               metrics=['accuracy'])
 
