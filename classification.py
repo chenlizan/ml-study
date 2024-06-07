@@ -2,6 +2,7 @@
 import tensorflow as tf
 
 # Helper libraries
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -41,7 +42,10 @@ model.summary()
 model.compile(optimizer='adam', loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
               metrics=['accuracy'])
 
-model.fit(x_train, y_train, epochs=5)
+log_dir = ".logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
+model.fit(x_train, y_train, epochs=5, callbacks=[tensorboard_callback])
 
 model.evaluate(x_test, y_test, verbose=2)
 
