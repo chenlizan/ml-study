@@ -62,3 +62,24 @@ with tf.compat.v1.Session(graph=g) as sess:
     x1 = np.random.uniform(low=0, high=1, size=(5, 2))
     print("Feeding data with shape ", x1.shape)
     print("Result:", sess.run(x_mean, feed_dict={tf_x: x1}))
+
+    x2 = np.random.uniform(low=0, high=1, size=(10, 2))
+    print("Feeding data with shape ", x2.shape)
+    print("Result:", sess.run(x_mean, feed_dict={tf_x: x2}))
+
+with g.as_default():
+    w = tf.Variable(np.array([[1, 2, 3, 4], [5, 6, 7, 8]]), name="w")
+    print(w)
+
+with tf.compat.v1.Session(graph=g) as sess:
+    sess.run(tf.compat.v1.global_variables_initializer())
+    print(sess.run(w))
+
+with g.as_default():
+    w1 = tf.Variable(1, name="w1")
+    init_op = tf.compat.v1.global_variables_initializer()
+    w2 = tf.Variable(2, name="w2")
+
+with tf.compat.v1.Session(graph=g) as sess:
+    sess.run(init_op)
+    print(sess.run(w2))
