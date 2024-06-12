@@ -140,14 +140,16 @@ with g.as_default():
 with g.as_default():
     tf.compat.v1.set_random_seed(123)
 
-    tf_x = tf.compat.v1.placeholder(shape=(None), dtype=tf.float32, name='tf_x')
-    tf_y = tf.compat.v1.placeholder(shape=(None), dtype=tf.float32, name='tf_y')
+    tf_x = tf.compat.v1.placeholder(shape=None, dtype=tf.float32, name='tf_x')
+    tf_y = tf.compat.v1.placeholder(shape=None, dtype=tf.float32, name='tf_y')
     weight = tf.Variable(tf.compat.v1.random_normal(shape=(1, 1), stddev=0.25), name="weight")
     bias = tf.Variable(0.0, name="bias")
     y_hat = tf.add(weight * tf_x, bias, name="y_hat")
     cost = tf.reduce_mean(tf.square(tf_y - y_hat), name="cost")
     optim = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=0.001)
     train_op = optim.minimize(cost, name="train_op")
+
+np.random.seed(0)
 
 
 def make_random_data():
@@ -171,3 +173,15 @@ n_epochs = 500
 training_costs = []
 with tf.compat.v1.Session(graph=g) as sess:
     sess.run(tf.compat.v1.global_variables_initializer())
+
+    for e in range(n_epochs):
+        # c, _ = sess.run([cost, train_op], feed_dict={tf_x: x_train, tf_y: y_train})
+
+        c, _ = sess.run(['cost:0', 'train_op'], feed_dict={'tf_x:0': x_train, 'tf_y:0': y_train})
+
+        training_costs.append(c)
+        if not e % 50:
+            print('Epoch %4d: %.4f' % (e, c))
+
+plt.plot(training_costs)
+plt.show()
