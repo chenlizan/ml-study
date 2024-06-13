@@ -140,8 +140,8 @@ with g.as_default():
 with g.as_default():
     tf.compat.v1.set_random_seed(123)
 
-    tf_x = tf.compat.v1.placeholder(shape=None, dtype=tf.float32, name='tf_x')
-    tf_y = tf.compat.v1.placeholder(shape=None, dtype=tf.float32, name='tf_y')
+    tf_x = tf.compat.v1.placeholder(dtype=tf.float32, name='tf_x')
+    tf_y = tf.compat.v1.placeholder(dtype=tf.float32, name='tf_y')
     weight = tf.Variable(tf.compat.v1.random_normal(shape=(1, 1), stddev=0.25), name="weight")
     bias = tf.Variable(0.0, name="bias")
     y_hat = tf.add(weight * tf_x, bias, name="y_hat")
@@ -175,13 +175,31 @@ with tf.compat.v1.Session(graph=g) as sess:
     sess.run(tf.compat.v1.global_variables_initializer())
 
     for e in range(n_epochs):
-        # c, _ = sess.run([cost, train_op], feed_dict={tf_x: x_train, tf_y: y_train})
-
-        c, _ = sess.run(['cost:0', 'train_op'], feed_dict={'tf_x:0': x_train, 'tf_y:0': y_train})
-
+        c, _ = sess.run([cost, train_op], feed_dict={'tf_x_2:0': x_train, tf_y: y_train})
         training_costs.append(c)
         if not e % 50:
             print('Epoch %4d: %.4f' % (e, c))
 
 plt.plot(training_costs)
 plt.show()
+
+with g.as_default():
+    arr = np.array([[1, 2, 3, 3.5],
+                    [4, 5, 6, 6.5],
+                    [7, 8, 9, 9.5]])
+
+    T1 = tf.constant(arr, name='T1')
+    print(T1)
+    s = T1.get_shape()
+    print('Shape of T1 is:', s)
+    T2 = tf.Variable(tf.compat.v1.random_normal(shape=s), name='T2')
+    print(T2)
+    T3 = tf.Variable(tf.compat.v1.random_normal(shape=(s.as_list()[0],), name='T3'))
+    print(T3)
+    T4 = tf.reshape(T1, shape=[1, 1, -1], name='T4')
+    print(T4)
+    T5 = tf.reshape(T1, shape=[1, 3, -1], name='T5')
+    print(T5.get_shape().as_list())
+
+with tf.compat.v1.Session(graph=g) as sess:
+    print(sess.run(T5))
