@@ -47,7 +47,9 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram
 
 model.fit(x_train, y_train, epochs=5, callbacks=[tensorboard_callback])
 
-model.evaluate(x_test, y_test, verbose=2)
+test_loss, test_acc = model.evaluate(x_test, y_test, verbose=2)
+
+print('\nTest accuracy:', test_acc)
 
 model.save('.keras/my_model.keras')
 
@@ -60,4 +62,8 @@ probability_model = tf.keras.Sequential([
     tf.keras.layers.Softmax()
 ])
 
-print(probability_model(x_test[:10]))
+print(probability_model(x_test[:5]))
+
+predictions = probability_model.predict(x_test)
+
+print(np.argmax(predictions[0]))
