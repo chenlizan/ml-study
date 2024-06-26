@@ -11,11 +11,11 @@ from PIL import features
 print(tf.__version__)
 print(features.pilinfo())
 
-# dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
-# data_dir = tf.keras.utils.get_file(origin=dataset_url,
-#                                    fname='flower_photos',
-#                                    untar=True)
-data_dir = pathlib.Path('flower_photos')
+dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
+data_dir = tf.keras.utils.get_file(origin=dataset_url,
+                                   fname=os.getcwd() + '/.keras/flower_photos',
+                                   untar=True)
+data_dir = pathlib.Path(data_dir)
 
 image_count = len(list(data_dir.glob('*/*.jpg')))
 print(image_count)
@@ -59,3 +59,34 @@ image_batch, labels_batch = next(iter(normalized_ds))
 first_image = image_batch[0]
 # Notice the pixel values are now in `[0,1]`.
 print(np.min(first_image), np.max(first_image))
+
+AUTOTUNE = tf.data.AUTOTUNE
+
+train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
+val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
+
+num_classes = 5
+
+model = tf.keras.Sequential([
+  tf.keras.layers.Rescaling(1./255),
+  tf.keras.layers.Conv2D(32, 3, activation='relu'),
+  tf.keras.layers.MaxPooling2D(),
+  tf.keras.layers.Conv2D(32, 3, activation='relu'),
+  tf.keras.layers.MaxPooling2D(),
+  tf.keras.layers.Conv2D(32, 3, activation='relu'),
+  tf.keras.layers.MaxPooling2D(),
+  tf.keras.layers.Flatten(),
+  tf.keras.layers.Dense(128, activation='relu'),
+  tf.keras.layers.Dense(num_classes)
+])
+
+model.compile(
+  optimizer='adam',
+  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+  metrics=['accuracy'])
+
+model.fit(
+  train_ds,
+  validation_data=val_ds,
+  epochs=3
+)
