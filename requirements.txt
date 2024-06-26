@@ -2,6 +2,7 @@ jieba
 matplotlib
 numpy
 pandas
+pillow
 scikit-learn
 tensorflow[and-cuda]
 tensorboard
