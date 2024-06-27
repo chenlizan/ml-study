@@ -7,9 +7,10 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import pathlib
 from PIL import features
+from keras.src.callbacks import EarlyStopping
 
 print(tf.__version__)
-print(features.pilinfo())
+# print(features.pilinfo())
 
 # dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
 # data_dir = tf.keras.utils.get_file(origin=dataset_url,
@@ -17,7 +18,7 @@ print(features.pilinfo())
 #                                    untar=True)
 # data_dir = pathlib.Path(data_dir)
 
-data_dir = pathlib.Path('flower_photos')
+data_dir = pathlib.Path('.keras/flower_photos')
 
 image_count = len(list(data_dir.glob('*/*.jpg')))
 print(image_count)
@@ -54,14 +55,6 @@ for images, labels in train_ds.take(1):
         plt.axis("off")
 plt.show()
 
-normalization_layer = tf.keras.layers.Rescaling(1. / 255)
-
-normalized_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
-image_batch, labels_batch = next(iter(normalized_ds))
-first_image = image_batch[0]
-# Notice the pixel values are now in `[0,1]`.
-print(np.min(first_image), np.max(first_image))
-
 AUTOTUNE = tf.data.AUTOTUNE
 
 train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
@@ -69,32 +62,47 @@ val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 num_classes = 5
 
+input_shape = (180, 180, 3)
+
 model = tf.keras.Sequential([
-    tf.keras.layers.Rescaling(1. / 255),
-    tf.keras.layers.Conv2D(32, 3, activation='relu'),
+    tf.keras.layers.Rescaling(1. / 255, input_shape=input_shape),
+    tf.keras.layers.Conv2D(32, 3, activation='relu', padding='same'),
     tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.MaxPooling2D(),
-    tf.keras.layers.Conv2D(32, 3, activation='relu'),
+    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+    tf.keras.layers.Conv2D(32, 3, activation='relu', padding='same'),
     tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.MaxPooling2D(),
-    tf.keras.layers.Conv2D(32, 3, activation='relu'),
+    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+    tf.keras.layers.Conv2D(32, 3, activation='relu', padding='same'),
     tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.MaxPooling2D(),
+    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+    tf.keras.layers.Conv2D(32, 3, activation='relu', padding='same'),
+    tf.keras.layers.BatchNormalization(),
+    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+    tf.keras.layers.Conv2D(32, 3, activation='relu', padding='same'),
+    tf.keras.layers.BatchNormalization(),
+    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
     tf.keras.layers.Flatten(),
     tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dropout(0.2),
-    tf.keras.layers.Dense(num_classes)
+    tf.keras.layers.Dropout(0.5),
+    tf.keras.layers.Dense(num_classes, activation='softmax')
 ])
 
+# 编译模型
 model.compile(
     optimizer='adam',
-    loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+    loss=tf.keras.losses.SparseCategoricalCrossentropy(),
     metrics=['accuracy'])
+
+# 打印模型结构
+model.summary()
+
+es_callback = EarlyStopping(monitor='val_loss', patience=3, verbose=1, restore_best_weights=True)
 
 model.fit(
     train_ds,
     validation_data=val_ds,
-    epochs=10
+    epochs=30,
+    callbacks=[es_callback]
 )
 
 for images, labels in val_ds.take(1):  # 只取一个批次
