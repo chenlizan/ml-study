@@ -127,3 +127,59 @@ for images, labels in val_ds.take(1):  # 只取一个批次
     plt.title(predicted_class_name)
     plt.axis("off")
     plt.show()
+
+list_ds = tf.data.Dataset.list_files(str(data_dir / '*/*'), shuffle=False)
+list_ds = list_ds.shuffle(image_count, reshuffle_each_iteration=False)
+
+val_size = int(image_count * 0.2)
+train_ds = list_ds.skip(val_size)
+val_ds = list_ds.take(val_size)
+
+
+def get_label(file_path):
+    # Convert the path to a list of path components
+    parts = tf.strings.split(file_path, os.path.sep)
+    # The second to last is the class-directory
+    one_hot = parts[-2] == class_names
+    # Integer encode the label
+    return tf.argmax(one_hot)
+
+
+def decode_img(img):
+    # Convert the compressed string to a 3D uint8 tensor
+    img = tf.io.decode_jpeg(img, channels=3)
+    # Resize the image to the desired size
+    return tf.image.resize(img, [img_height, img_width])
+
+
+def process_path(file_path):
+    label = get_label(file_path)
+    print(file_path)
+    # Load the raw data from the file as a string
+    img = tf.io.read_file(file_path)
+    img = decode_img(img)
+    return img, label
+
+
+# Set `num_parallel_calls` so multiple images are loaded/processed in parallel.
+train_ds = train_ds.map(process_path, num_parallel_calls=AUTOTUNE)
+val_ds = val_ds.map(process_path, num_parallel_calls=AUTOTUNE)
+
+
+def configure_for_performance(ds):
+    ds = ds.cache()
+    ds = ds.shuffle(buffer_size=1000)
+    ds = ds.batch(batch_size)
+    ds = ds.prefetch(buffer_size=AUTOTUNE)
+    return ds
+
+
+train_ds = configure_for_performance(train_ds)
+val_ds = configure_for_performance(val_ds)
+
+model.fit(
+    train_ds,
+    validation_data=val_ds,
+    epochs=30,
+    callbacks=[es_callback]
+)
