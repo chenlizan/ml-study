@@ -7,7 +7,6 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import pathlib
 from PIL import features
-from keras.src.callbacks import EarlyStopping
 
 print(tf.__version__)
 # print(features.pilinfo())
@@ -96,7 +95,7 @@ model.compile(
 # 打印模型结构
 model.summary()
 
-es_callback = EarlyStopping(monitor='val_loss', patience=3, verbose=1, restore_best_weights=True)
+es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=1, restore_best_weights=True)
 
 model.fit(
     train_ds,
@@ -104,29 +103,6 @@ model.fit(
     epochs=30,
     callbacks=[es_callback]
 )
-
-for images, labels in val_ds.take(1):  # 只取一个批次
-
-    predictions = model.predict(images[:1])
-    print(labels[:1].numpy())
-
-    probabilities = tf.nn.softmax(predictions, axis=1)
-
-    # 每个类别预测概率的数组
-    print(f'predict: {predictions[0]}')
-
-    # 获取最有可能的类别的索引
-    predicted_class_index = np.argmax(probabilities[0])
-
-    # 将索引转换为类别名称
-    predicted_class_name = class_names[predicted_class_index]
-    print(predicted_class_name)
-
-    plt.figure(figsize=(20, 20))
-    plt.imshow(images[0].numpy().astype("uint8"))
-    plt.title(predicted_class_name)
-    plt.axis("off")
-    plt.show()
 
 list_ds = tf.data.Dataset.list_files(str(data_dir / '*/*'), shuffle=False)
 list_ds = list_ds.shuffle(image_count, reshuffle_each_iteration=False)
@@ -154,7 +130,6 @@ def decode_img(img):
 
 def process_path(file_path):
     label = get_label(file_path)
-    print(file_path)
     # Load the raw data from the file as a string
     img = tf.io.read_file(file_path)
     img = decode_img(img)
@@ -183,3 +158,25 @@ model.fit(
     epochs=30,
     callbacks=[es_callback]
 )
+
+for images, labels in val_ds.take(1):
+    predictions = model.predict(images[:1])
+    print(labels[:1].numpy())
+
+    probabilities = tf.nn.softmax(predictions, axis=1)
+
+    # 每个类别预测概率的数组
+    print(f'predict: {predictions[0]}')
+
+    # 获取最有可能的类别的索引
+    predicted_class_index = np.argmax(probabilities[0])
+
+    # 将索引转换为类别名称
+    predicted_class_name = class_names[predicted_class_index]
+    print(predicted_class_name)
+
+    plt.figure(figsize=(20, 20))
+    plt.imshow(images[0].numpy().astype("uint8"))
+    plt.title(predicted_class_name)
+    plt.axis("off")
+    plt.show()
