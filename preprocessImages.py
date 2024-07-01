@@ -97,12 +97,12 @@ model.summary()
 
 es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=1, restore_best_weights=True)
 
-model.fit(
-    train_ds,
-    validation_data=val_ds,
-    epochs=30,
-    callbacks=[es_callback]
-)
+# model.fit(
+#     train_ds,
+#     validation_data=val_ds,
+#     epochs=30,
+#     callbacks=[es_callback]
+# )
 
 list_ds = tf.data.Dataset.list_files(str(data_dir / '*/*'), shuffle=False)
 list_ds = list_ds.shuffle(image_count, reshuffle_each_iteration=False)
@@ -159,24 +159,44 @@ model.fit(
     callbacks=[es_callback]
 )
 
-for images, labels in val_ds.take(1):
-    predictions = model.predict(images[:1])
-    print(labels[:1].numpy())
+# for images, labels in val_ds.take(1):
+#     predictions = model.predict(images[:1])
+#     print(labels[:1].numpy())
+#
+#     probabilities = tf.nn.softmax(predictions, axis=1)
+#
+#     # 每个类别预测概率的数组
+#     print(f'predict: {predictions[0]}')
+#
+#     # 获取最有可能的类别的索引
+#     predicted_class_index = np.argmax(probabilities[0])
+#
+#     # 将索引转换为类别名称
+#     predicted_class_name = class_names[predicted_class_index]
+#     print(predicted_class_name)
+#
+#     plt.figure(figsize=(20, 20))
+#     plt.imshow(images[0].numpy().astype("uint8"))
+#     plt.title(predicted_class_name)
+#     plt.axis("off")
+#     plt.show()
 
-    probabilities = tf.nn.softmax(predictions, axis=1)
+# 第一步：从本地读取图片文件
+image_raw = tf.io.read_file("dandelion.jpg")
 
-    # 每个类别预测概率的数组
-    print(f'predict: {predictions[0]}')
+# 第二步：解码图片数据
+image = tf.image.decode_jpeg(image_raw, channels=3)
 
-    # 获取最有可能的类别的索引
-    predicted_class_index = np.argmax(probabilities[0])
+# 第三步：可选的图片预处理，例如调整大小和标准化
+image = tf.image.resize(image, [img_width, img_height])
 
-    # 将索引转换为类别名称
-    predicted_class_name = class_names[predicted_class_index]
-    print(predicted_class_name)
+plt.figure(figsize=(20, 20))
+plt.imshow(image.numpy().astype("uint8"))
+plt.axis("off")
+plt.show()
 
-    plt.figure(figsize=(20, 20))
-    plt.imshow(images[0].numpy().astype("uint8"))
-    plt.title(predicted_class_name)
-    plt.axis("off")
-    plt.show()
+predictions = model.predict(tf.expand_dims(image, axis=0))
+probabilities = tf.nn.softmax(predictions, axis=1)
+predicted_class_index = np.argmax(probabilities[0])
+predicted_class_name = class_names[predicted_class_index]
+print(predicted_class_name)
