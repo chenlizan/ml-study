@@ -12,7 +12,7 @@ print(tf.__version__)
 
 url = "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
 
-dataset = tf.keras.utils.get_file("aclImdb_v1", url, untar=True, cache_dir='.', cache_subdir='')
+dataset = tf.keras.utils.get_file("aclImdb_v1", url, untar=True, cache_dir='.keras', cache_subdir='')
 
 dataset_dir = os.path.join(os.path.dirname(dataset), 'aclImdb')
 
@@ -29,21 +29,21 @@ batch_size = 32
 seed = 42
 
 raw_train_ds = tf.keras.utils.text_dataset_from_directory(
-    'aclImdb/train',
+    '.keras/aclImdb/train',
     batch_size=batch_size,
     validation_split=0.2,
     subset='training',
     seed=seed)
 
 raw_val_ds = tf.keras.utils.text_dataset_from_directory(
-    'aclImdb/train',
+    '.keras/aclImdb/train',
     batch_size=batch_size,
     validation_split=0.2,
     subset='validation',
     seed=seed)
 
 raw_test_ds = tf.keras.utils.text_dataset_from_directory(
-    'aclImdb/test',
+    '.keras/aclImdb/test',
     batch_size=batch_size)
 
 
@@ -104,8 +104,9 @@ model = tf.keras.Sequential([
 
 model.summary()
 
-model.compile(loss=losses.BinaryCrossentropy(from_logits=True), optimizer='adam',
-              metrics=tf.metrics.BinaryAccuracy(threshold=0.5))
+model.compile(loss=losses.BinaryCrossentropy(from_logits=True),
+              optimizer='adam',
+              metrics=[tf.metrics.BinaryAccuracy(threshold=0.5)])
 
 epochs = 10
 history = model.fit(
@@ -134,4 +135,4 @@ examples = [
     "The movie was terrible...",
 ]
 
-print(export_model.predict(examples))
+print(export_model.predict(tf.expand_dims(examples, axis=1)))

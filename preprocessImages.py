@@ -159,6 +159,8 @@ model.fit(
     callbacks=[es_callback]
 )
 
+model.save('.keras/preprocess_images_model.keras')
+
 # for images, labels in val_ds.take(1):
 #     predictions = model.predict(images[:1])
 #     print(labels[:1].numpy())
