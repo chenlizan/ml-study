@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import os
 import re
 import shutil
+import ssl
 import string
 import tensorflow as tf
 
@@ -9,6 +10,7 @@ from tensorflow.keras import layers
 from tensorflow.keras import losses
 
 print(tf.__version__)
+ssl._create_default_https_context = ssl._create_unverified_context
 
 url = "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
 
@@ -21,7 +23,7 @@ os.listdir(dataset_dir)
 train_dir = os.path.join(dataset_dir, 'train')
 os.listdir(train_dir)
 
-# unsup 无监督
+# 移除无标签数据
 remove_dir = os.path.join(train_dir, 'unsup')
 shutil.rmtree(remove_dir)
 
@@ -47,6 +49,7 @@ raw_test_ds = tf.keras.utils.text_dataset_from_directory(
     batch_size=batch_size)
 
 
+# 自定义标准化函数来移除HTML
 def custom_standardization(input_data):
     lowercase = tf.strings.lower(input_data)
     stripped_html = tf.strings.regex_replace(lowercase, '<br />', ' ')
@@ -106,7 +109,7 @@ model.summary()
 
 model.compile(loss=losses.BinaryCrossentropy(from_logits=True),
               optimizer='adam',
-              metrics=[tf.metrics.BinaryAccuracy(threshold=0.5)])
+              metrics=[tf.metrics.BinaryAccuracy(threshold=0.1)])
 
 epochs = 10
 history = model.fit(
