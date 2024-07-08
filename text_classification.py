@@ -65,8 +65,8 @@ vectorize_layer = layers.TextVectorization(
     output_mode='int',
     output_sequence_length=sequence_length)
 
-# Make a text-only dataset (without labels), then call adapt
 train_text = raw_train_ds.map(lambda x, y: x)
+# 调用 adapt 方法以构建词汇表
 vectorize_layer.adapt(train_text)
 
 
@@ -75,17 +75,7 @@ def vectorize_text(text, label):
     return vectorize_layer(text), label
 
 
-# retrieve a batch (of 32 reviews and labels) from the dataset
-text_batch, label_batch = next(iter(raw_train_ds))
-first_review, first_label = text_batch[0], label_batch[0]
-print("Review", first_review)
-print("Label", raw_train_ds.class_names[first_label])
-print("Vectorized review", vectorize_text(first_review, first_label))
-
-print("1287 ---> ", vectorize_layer.get_vocabulary()[1287])
-print(" 313 ---> ", vectorize_layer.get_vocabulary()[313])
-print('Vocabulary size: {}'.format(len(vectorize_layer.get_vocabulary())))
-
+# 生成训练数据集、验证数据集和测试数据集
 train_ds = raw_train_ds.map(vectorize_text)
 val_ds = raw_val_ds.map(vectorize_text)
 test_ds = raw_test_ds.map(vectorize_text)
@@ -118,7 +108,6 @@ history = model.fit(
     epochs=epochs)
 
 loss, accuracy = model.evaluate(test_ds)
-
 print("Loss: ", loss)
 print("Accuracy: ", accuracy)
 
