@@ -8,6 +8,7 @@ import tensorflow as tf
 
 from tensorflow.keras import layers
 from tensorflow.keras import losses
+from tensorflow.keras.optimizers import Adam
 
 print(tf.__version__)
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -93,20 +94,29 @@ int_train_ds = configure_dataset(int_train_ds)
 int_val_ds = configure_dataset(int_val_ds)
 int_test_ds = configure_dataset(int_test_ds)
 
-es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=1, restore_best_weights=True)
+es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True, verbose=1)
+reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, verbose=1)
 
 binary_model = tf.keras.Sequential([
-    layers.Dense(128, activation='relu'),
+    # layers.Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001), input_shape=(10000,)),
+    # layers.BatchNormalization(),
+    # layers.Dropout(0.5),
+    # layers.Dense(64, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001)),
+    # layers.BatchNormalization(),
+    # layers.Dropout(0.5),
     layers.Dropout(0.5),
-    layers.Dense(4, activation='softmax')])
+    layers.Dense(4),  # 输出层，没有激活函数
+])
 
 binary_model.compile(
-    loss=losses.SparseCategoricalCrossentropy(),
-    optimizer='adam',
+    loss=losses.SparseCategoricalCrossentropy(from_logits=True),
+    optimizer=Adam(learning_rate=0.001),
     metrics=['accuracy'])
 
+binary_model.summary()
+
 history = binary_model.fit(
-    binary_train_ds, validation_data=binary_val_ds, epochs=10, callbacks=[es_callback])
+    binary_train_ds, validation_data=binary_val_ds, epochs=100, callbacks=[reduce_lr, es_callback])
 
 int_model = tf.keras.Sequential([
     layers.Embedding(VOCAB_SIZE + 1, 64, mask_zero=True),
@@ -136,6 +146,9 @@ export_model.compile(
     loss=losses.SparseCategoricalCrossentropy(from_logits=False),
     optimizer='adam',
     metrics=['accuracy'])
+
+result = export_model.evaluate(raw_test_ds, return_dict=True)
+print("Accuracy: {:2.2%}".format(result['accuracy']))
 
 
 def get_string_labels(predicted_scores_batch):
