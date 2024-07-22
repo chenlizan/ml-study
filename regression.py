@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import ssl
 
 # Make NumPy printouts easier to read.
 np.set_printoptions(precision=3, suppress=True)
@@ -12,6 +13,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 print(tf.__version__)
+ssl._create_default_https_context = ssl._create_unverified_context
 
 url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data'
 column_names = ['MPG', 'Cylinders', 'Displacement', 'Horsepower', 'Weight',

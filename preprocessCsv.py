@@ -1,11 +1,15 @@
+import ssl
 import tensorflow as tf
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+print(tf.__version__)
+ssl._create_default_https_context = ssl._create_unverified_context
+
 abalone_train = pd.read_csv(
-    ".keras/abalone_train.csv",
+    "https://storage.googleapis.com/download.tensorflow.org/data/abalone_train.csv",
     names=["Length", "Diameter", "Height", "Whole weight", "Shucked weight",
            "Viscera weight", "Shell weight", "Age"])
 

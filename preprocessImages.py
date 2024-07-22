@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import ssl
 import PIL
 import PIL.Image
 import matplotlib.pyplot as plt
@@ -9,15 +10,12 @@ import pathlib
 from PIL import features
 
 print(tf.__version__)
-# print(features.pilinfo())
+ssl._create_default_https_context = ssl._create_unverified_context
 
-# dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
-# data_dir = tf.keras.utils.get_file(origin=dataset_url,
-#                                    fname=os.getcwd() + '/.keras/flower_photos',
-#                                    untar=True)
-# data_dir = pathlib.Path(data_dir)
-
-data_dir = pathlib.Path('.keras/flower_photos')
+dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
+data_dir = tf.keras.utils.get_file(origin=dataset_url, fname='flower_photos',
+                                   untar=True, cache_dir='.keras', cache_subdir='')
+data_dir = pathlib.Path(data_dir)
 
 image_count = len(list(data_dir.glob('*/*.jpg')))
 print(image_count)
