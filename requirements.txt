@@ -4,5 +4,6 @@ numpy
 pandas
 pillow
 scikit-learn
+seaborn
 tensorflow[and-cuda]
 tensorboard

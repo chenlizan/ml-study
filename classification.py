@@ -1,4 +1,4 @@
-# TensorFlow and tf.keras
+# https://www.tensorflow.org/tutorials/keras/classification?hl=zh-cn
 import tensorflow as tf
 
 # Helper libraries
