@@ -4,14 +4,13 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import ssl
-
-# Make NumPy printouts easier to read.
-np.set_printoptions(precision=3, suppress=True)
-
 import tensorflow as tf
 
 from tensorflow import keras
 from tensorflow.keras import layers
+
+# Make NumPy printouts easier to read.
+np.set_printoptions(precision=3, suppress=True)
 
 print(tf.__version__)
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -28,26 +27,23 @@ dataset = raw_dataset.copy()
 dataset.tail()
 
 dataset.isna().sum()
-
 dataset = dataset.dropna()
 
 dataset['Origin'] = dataset['Origin'].map({1: 'USA', 2: 'Europe', 3: 'Japan'})
-
 dataset = pd.get_dummies(dataset, columns=['Origin'], prefix='', prefix_sep='')
-dataset = dataset.astype(int)
+dataset = dataset.astype({'USA': float, 'Europe': float, 'Japan': float})
 print(dataset.tail())
 
 train_dataset = dataset.sample(frac=0.8, random_state=0)
 test_dataset = dataset.drop(train_dataset.index)
 
 sns.pairplot(train_dataset[['MPG', 'Cylinders', 'Displacement', 'Weight']], diag_kind='kde')
-
 plt.show()
 
 train_labels = train_dataset.pop('MPG')
 test_labels = test_dataset.pop('MPG')
-train_stats = train_dataset.describe().transpose()
 
+train_stats = train_dataset.describe().transpose()
 print(train_stats)
 
 
@@ -58,24 +54,18 @@ def norm(x):
 normed_train_data = norm(train_dataset)
 normed_test_data = norm(test_dataset)
 
+model = keras.Sequential([
+    layers.Input(shape=train_dataset.shape[1:]),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(1)
+])
 
-def build_model():
-    model = keras.Sequential([
-        layers.Input(shape=train_dataset.shape[1:]),
-        layers.Dense(64, activation='relu'),
-        layers.Dense(64, activation='relu'),
-        layers.Dense(1)
-    ])
+optimizer = tf.keras.optimizers.RMSprop(0.001)
 
-    optimizer = tf.keras.optimizers.RMSprop(0.001)
-
-    model.compile(loss='mse',
-                  optimizer=optimizer,
-                  metrics=['mae', 'mse'])
-    return model
-
-
-model = build_model()
+model.compile(loss='mse',
+              optimizer=optimizer,
+              metrics=['mae', 'mse'])
 
 model.summary()
 
@@ -106,12 +96,10 @@ def plot_history(history):
     plt.show()
 
 
-EPOCHS = 1000
-
 early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
 
+EPOCHS = 1000
 history = model.fit(normed_train_data, train_labels, epochs=EPOCHS,
                     validation_split=0.2, verbose=0, callbacks=[early_stop])
 
-print(pd.DataFrame(history.history))
 plot_history(history)
