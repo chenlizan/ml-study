@@ -7,3 +7,4 @@ scikit-learn
 seaborn
 tensorflow[and-cuda]
 tensorboard
+keras_tuner
