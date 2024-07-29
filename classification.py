@@ -35,6 +35,7 @@ def model_builder(hp):
     # Tune the number of units in the first Dense layer
     # Choose an optimal value between 32-512
     hp_units = hp.Int('units', min_value=32, max_value=512, step=32)
+    model.add(keras.layers.Dense(units=hp_units, activation='relu'))
     model.add(keras.layers.Dropout(0.2))
     model.add(keras.layers.Dense(10))
 
@@ -52,8 +53,7 @@ def model_builder(hp):
 tuner = kt.Hyperband(model_builder,
                      objective='val_accuracy',
                      max_epochs=10,
-                     factor=3,
-                     directory='my_dir',
+                     directory='.keras',
                      project_name='intro_to_kt')
 
 stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)

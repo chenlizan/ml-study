@@ -6,7 +6,9 @@ import shutil
 import ssl
 import string
 import tensorflow as tf
+import keras_tuner as kt
 
+from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras import losses
 
@@ -87,45 +89,74 @@ train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 test_ds = test_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
-embedding_dim = 16
 
-model = tf.keras.Sequential([
-    layers.Embedding(max_features + 1, embedding_dim),
-    layers.Dropout(0.2),
-    layers.GlobalAveragePooling1D(),
-    layers.Dropout(0.2),
-    layers.Dense(1)])
+def build_model(hp):
+    hp_embedding_dim = hp.Int('embedding_dim', min_value=16, max_value=512, step=16)
+    hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
+
+    model = keras.Sequential()
+    model.add(layers.Embedding(max_features, hp_embedding_dim))
+    model.add(layers.GlobalAveragePooling1D())
+    model.add(layers.Dropout(0.2))
+    model.add(layers.Dense(1))
+
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate=hp_learning_rate),
+                  loss=losses.BinaryCrossentropy(from_logits=True),
+                  metrics=[tf.metrics.BinaryAccuracy(threshold=0.1)])
+
+    return model
+
+
+tuner = kt.Hyperband(build_model,
+                     objective='val_binary_accuracy',
+                     max_epochs=10,
+                     directory='.keras',
+                     project_name='text_classification')
+
+stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
+
+tuner.search(train_ds, validation_data=val_ds, epochs=50, callbacks=[stop_early])
+
+# Get the optimal hyperparameters
+best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+
+print(f"""
+The hyperparameter search is complete.
+The optimal learning rate for the optimizer is {best_hps.get('learning_rate')}.
+The optimal number of embedding vector dimension is {best_hps.get('embedding_dim')}.
+""")
+
+model = tf.keras.Sequential([layers.Embedding(max_features + 1, best_hps.get('embedding_dim')),
+                             layers.GlobalAveragePooling1D(),
+                             layers.Dropout(0.2),
+                             layers.Dense(1)])
 
 model.summary()
 
-model.compile(loss=losses.BinaryCrossentropy(from_logits=True),
-              optimizer='adam',
+model.compile(optimizer=keras.optimizers.Adam(learning_rate=best_hps.get('learning_rate')),
+              loss=losses.BinaryCrossentropy(from_logits=True),
               metrics=[tf.metrics.BinaryAccuracy(threshold=0.1)])
 
 epochs = 10
-history = model.fit(
-    train_ds,
-    validation_data=val_ds,
-    epochs=epochs)
+history = model.fit(train_ds,
+                    validation_data=val_ds,
+                    epochs=epochs,
+                    callbacks=[stop_early])
 
 loss, accuracy = model.evaluate(test_ds)
 print("Loss: ", loss)
 print("Accuracy: ", accuracy)
 
-export_model = tf.keras.Sequential([
-    vectorize_layer,
-    model,
-    layers.Activation('sigmoid')
-])
+export_model = tf.keras.Sequential([vectorize_layer,
+                                    model,
+                                    layers.Activation('sigmoid')
+                                    ])
 
-export_model.compile(
-    loss=losses.BinaryCrossentropy(from_logits=False), optimizer="adam", metrics=['accuracy']
-)
+export_model.compile(loss=losses.BinaryCrossentropy(from_logits=False), optimizer="adam", metrics=['accuracy'])
 
-examples = [
-    "The movie was great!",
-    "The movie was okay.",
-    "The movie was terrible...",
-]
+examples = ["The movie was great!",
+            "The movie was okay.",
+            "The movie was terrible...",
+            ]
 
 print(export_model.predict(tf.expand_dims(examples, axis=1)))
