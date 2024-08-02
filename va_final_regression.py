@@ -1,8 +1,11 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+
+predict_col = 'ZA'
 
 va_df = pd.read_csv('FULL_3_LONG.csv',
                     usecols=[
@@ -45,79 +48,83 @@ va_df = va_df.dropna(
     subset=['SID', 'TEST', 'ZA', 'NOICM', 'NOICSD', 'L', 'Q', 'PROM', 'EXP', 'EXPSQR', 'EDU', 'TOP', 'RK', 'SEX', 'KEY',
             'SCIE'])
 
+# 获取需要的数据列
 dataset = va_df[
     ['SID', 'TEST', 'ZA', 'NOICM', 'NOICSD', 'L', 'Q', 'PROM', 'EXP', 'EXPSQR', 'EDU', 'TOP', 'RK', 'SEX', 'KEY',
      'SCIE']]
 
+# 数据拆分为训练集和测试集
 train_dataset = dataset.sample(frac=0.8, random_state=0)
 test_dataset = dataset.drop(train_dataset.index)
 
-train_labels = train_dataset.pop('ZA')
-test_labels = test_dataset.pop('ZA')
+# 拆分训练集和测试集的预测值
+train_labels = train_dataset.pop(predict_col)
+test_labels = test_dataset.pop(predict_col)
 
+# 打印训练集总体统计数据
 train_stats = train_dataset.describe().transpose()
 print(train_stats)
 
 
-def norm(x):
-    # return (x - train_stats['mean']) / train_stats['std']
-    return x
+# 定义模型
+def build_and_compile_model(norm):
+    model = keras.Sequential([
+        norm,
+        layers.Dense(64, activation='relu'),
+        layers.Dense(64, activation='relu'),
+        layers.Dense(1)
+    ])
+
+    model.compile(loss='mean_absolute_error',
+                  optimizer=keras.optimizers.Adam(0.001))
+    return model
 
 
-normed_train_data = norm(train_dataset)
-normed_test_data = norm(test_dataset)
-
-model = keras.Sequential([
-    layers.Input(shape=train_dataset.shape[1:]),
-    layers.Dense(64, activation='relu'),
-    layers.Dense(64, activation='relu'),
-    layers.Dense(1)
-])
-
-optimizer = tf.keras.optimizers.RMSprop(0.001)
-
-model.compile(loss='mse',
-              optimizer=optimizer,
-              metrics=['mae', 'mse'])
-
-model.summary()
-
-
-def plot_history(history):
-    hist = pd.DataFrame(history.history)
-    hist['epoch'] = history.epoch
-
-    plt.figure()
+# 绘制训练过程中损失(loss)和验证损失(val_loss)的图表
+def plot_loss(history):
+    plt.plot(history.history['loss'], label='loss')
+    plt.plot(history.history['val_loss'], label='val_loss')
+    plt.ylim([0, 10])
     plt.xlabel('Epoch')
-    plt.ylabel('Mean Abs Error [ZA]')
-    plt.plot(hist['epoch'], hist['mae'],
-             label='Train Error')
-    plt.plot(hist['epoch'], hist['val_mae'],
-             label='Val Error')
-    plt.ylim([0, 5])
+    plt.ylabel(f'Error [{predict_col}]')
     plt.legend()
-
-    plt.figure()
-    plt.xlabel('Epoch')
-    plt.ylabel('Mean Square Error [$ZA^2$]')
-    plt.plot(hist['epoch'], hist['mse'],
-             label='Train Error')
-    plt.plot(hist['epoch'], hist['val_mse'],
-             label='Val Error')
-    plt.ylim([0, 20])
-    plt.legend()
-    plt.show()
+    plt.grid(True)
 
 
-early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
+# 初始化特征规范化层
+normalizer = layers.Normalization(axis=-1)
+normalizer.adapt(np.array(train_dataset))
+print(normalizer.mean.numpy())
 
-EPOCHS = 1000
-history = model.fit(normed_train_data, train_labels, epochs=EPOCHS,
-                    validation_split=0.2, verbose=0, callbacks=[early_stop])
+# 创建模型
+dnn_model = build_and_compile_model(normalizer)
 
-plot_history(history)
+# 打印模型概述
+dnn_model.summary()
 
-test_predictions = model.predict(normed_test_data[:10]).flatten()
+# 训练模型
+dnn_history = dnn_model.fit(
+    train_dataset,
+    train_labels,
+    validation_split=0.2,
+    verbose=0, epochs=100)
 
-print(test_predictions)
-print(test_labels[:10])
+# 绘制训练过程中损失(loss)和验证损失(val_loss)的图表
+plot_loss(dnn_history)
+
+# 绘制散点图和线性
+test_predictions = dnn_model.predict(test_dataset).flatten()
+a = plt.axes(aspect='equal')
+plt.scatter(test_labels, test_predictions)
+plt.xlabel(f'True Values [{predict_col}]')
+plt.ylabel(f'Predictions [{predict_col}]')
+lims = [0, 50]
+plt.xlim(lims)
+plt.ylim(lims)
+_ = plt.plot(lims, lims)
+
+# 绘制错误分布图
+error = test_predictions - test_labels
+plt.hist(error, bins=25)
+plt.xlabel(f'Prediction Error [{predict_col}]')
+_ = plt.ylabel('Count')
