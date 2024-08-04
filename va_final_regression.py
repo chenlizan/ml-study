@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
+# 定义预测列
 predict_col = 'ZA'
 
 va_df = pd.read_csv('FULL_3_LONG.csv',
@@ -75,20 +76,9 @@ def build_and_compile_model(norm):
         layers.Dense(1)
     ])
 
-    model.compile(loss='mean_absolute_error',
-                  optimizer=keras.optimizers.Adam(0.001))
+    model.compile(optimizer=keras.optimizers.Adam(0.001),
+                  loss=keras.losses.MeanAbsoluteError())
     return model
-
-
-# 绘制训练过程中损失(loss)和验证损失(val_loss)的图表
-def plot_loss(history):
-    plt.plot(history.history['loss'], label='loss')
-    plt.plot(history.history['val_loss'], label='val_loss')
-    plt.ylim([0, 10])
-    plt.xlabel('Epoch')
-    plt.ylabel(f'Error [{predict_col}]')
-    plt.legend()
-    plt.grid(True)
 
 
 # 初始化特征规范化层
@@ -109,7 +99,22 @@ dnn_history = dnn_model.fit(
     validation_split=0.2,
     verbose=0, epochs=100)
 
+# 回归模型的性能评估指标(MAE)
+dnn_model.evaluate(test_dataset, test_labels, verbose=0)
+
+
 # 绘制训练过程中损失(loss)和验证损失(val_loss)的图表
+def plot_loss(history):
+    plt.plot(history.history['loss'], label='loss')
+    plt.plot(history.history['val_loss'], label='val_loss')
+    plt.ylim([0, 1])
+    plt.xlabel('Epoch')
+    plt.ylabel(f'Error [{predict_col}]')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
 plot_loss(dnn_history)
 
 # 绘制散点图和线性
@@ -118,13 +123,15 @@ a = plt.axes(aspect='equal')
 plt.scatter(test_labels, test_predictions)
 plt.xlabel(f'True Values [{predict_col}]')
 plt.ylabel(f'Predictions [{predict_col}]')
-lims = [0, 50]
+lims = [0, 4]
 plt.xlim(lims)
 plt.ylim(lims)
-_ = plt.plot(lims, lims)
+plt.plot(lims, lims)
+plt.show()
 
 # 绘制错误分布图
 error = test_predictions - test_labels
 plt.hist(error, bins=25)
 plt.xlabel(f'Prediction Error [{predict_col}]')
-_ = plt.ylabel('Count')
+plt.ylabel('Count')
+plt.show()
