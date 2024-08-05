@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras.callbacks import EarlyStopping
 
 # 定义预测列
 predict_col = 'ZA'
@@ -94,7 +94,7 @@ dnn_model = build_and_compile_model(normalizer)
 dnn_model.summary()
 
 # 定义EarlyStopping回调
-stop_early = EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
+stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
 
 # 训练模型
 dnn_history = dnn_model.fit(
