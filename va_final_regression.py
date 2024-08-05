@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+from tensorflow.keras.callbacks import EarlyStopping
 
 # 定义预测列
 predict_col = 'ZA'
@@ -71,13 +71,14 @@ print(train_stats)
 def build_and_compile_model(norm):
     model = keras.Sequential([
         norm,
-        layers.Dense(64, activation='relu'),
-        layers.Dense(64, activation='relu'),
+        layers.Dense(32, activation='relu'),
+        layers.Dense(32, activation='relu'),
         layers.Dense(1)
     ])
 
     model.compile(optimizer=keras.optimizers.Adam(0.001),
-                  loss=keras.losses.MeanAbsoluteError())
+                  loss=keras.losses.MeanAbsoluteError(),
+                  metrics=['mae'])
     return model
 
 
@@ -92,22 +93,26 @@ dnn_model = build_and_compile_model(normalizer)
 # 打印模型概述
 dnn_model.summary()
 
+# 定义EarlyStopping回调
+stop_early = EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
+
 # 训练模型
 dnn_history = dnn_model.fit(
     train_dataset,
     train_labels,
     validation_split=0.2,
-    verbose=0, epochs=100)
+    epochs=100,
+    callbacks=[stop_early])
 
 # 回归模型的性能评估指标(MAE)
-dnn_model.evaluate(test_dataset, test_labels, verbose=0)
+print('evaluate:', dnn_model.evaluate(test_dataset, test_labels))
 
 
 # 绘制训练过程中损失(loss)和验证损失(val_loss)的图表
 def plot_loss(history):
     plt.plot(history.history['loss'], label='loss')
     plt.plot(history.history['val_loss'], label='val_loss')
-    plt.ylim([0, 1])
+    plt.ylim([0.6, 0.8])
     plt.xlabel('Epoch')
     plt.ylabel(f'Error [{predict_col}]')
     plt.legend()
