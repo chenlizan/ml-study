@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import keras_tuner as kt
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -66,35 +67,64 @@ test_labels = test_dataset.pop(predict_col)
 train_stats = train_dataset.describe().transpose()
 print(train_stats)
 
-
-# 定义模型
-def build_and_compile_model(norm):
-    model = keras.Sequential([
-        norm,
-        layers.Dense(32, activation='relu'),
-        layers.Dense(32, activation='relu'),
-        layers.Dense(1)
-    ])
-
-    model.compile(optimizer=keras.optimizers.Adam(0.001),
-                  loss=keras.losses.MeanAbsoluteError(),
-                  metrics=['mae'])
-    return model
-
-
 # 初始化特征规范化层
 normalizer = layers.Normalization(axis=-1)
 normalizer.adapt(np.array(train_dataset))
 print(normalizer.mean.numpy())
 
-# 创建模型
-dnn_model = build_and_compile_model(normalizer)
+# 定义EarlyStopping回调
+stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
+
+
+# 定义超参模型
+def model_builder(hp):
+    hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
+    hp_units = hp.Int('units', min_value=16, max_value=512, step=16)
+
+    model = keras.Sequential([
+        normalizer,
+        layers.Dense(units=hp_units, activation='relu'),
+        layers.Dense(1)
+    ])
+
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate=hp_learning_rate),
+                  loss=keras.losses.MeanAbsoluteError(),
+                  metrics=['mae'])
+    return model
+
+
+# 实例化超参调谐器
+tuner = kt.Hyperband(model_builder,
+                     objective='val_mae',
+                     max_epochs=10,
+                     directory='.keras',
+                     project_name='va_final_regression')
+
+# 运行调谐器
+tuner.search(train_dataset, train_labels, epochs=100, validation_split=0.2, callbacks=[stop_early])
+
+best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+
+print(f"""
+超参搜索完成.
+最佳输出维度 {best_hps.get('units')}
+最佳学习率 {best_hps.get('learning_rate')}.
+""")
+
+# 创建顺序模型
+dnn_model = keras.Sequential([
+    normalizer,
+    layers.Dense(units=best_hps.get('units'), activation='relu'),
+    layers.Dense(1)
+])
+
+# 编译模型
+dnn_model.compile(optimizer=keras.optimizers.Adam(learning_rate=best_hps.get('learning_rate')),
+                  loss=keras.losses.MeanAbsoluteError(),
+                  metrics=['mae'])
 
 # 打印模型概述
 dnn_model.summary()
-
-# 定义EarlyStopping回调
-stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
 
 # 训练模型
 dnn_history = dnn_model.fit(
